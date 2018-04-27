@@ -1,0 +1,235 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1.0in]{geometry}
+\usepackage{url, enumitem}
+\usepackage{amsfonts, amsmath, amsthm, amssymb}
+\usepackage{listings}
+\usepackage{hyperref}
+
+\theoremstyle{definition}
+\newtheorem{defn}{Definition}[section]
+\theoremstyle{plain}
+\usepackage[textsize=tiny]{todonotes}
+
+% Some useful macros.
+\newcommand{\given}{\,|\,}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\var}{\text{var}}
+\newcommand{\cov}{\text{cov}}
+\newcommand{\p}{\partial}
+\newcommand{\mba}{\mathbf{a}}
+\newcommand{\mbb}{\mathbf{b}}
+\newcommand{\mbx}{\mathbf{x}}
+\newcommand{\mcX}{\mathcal{X}}
+\newcommand{\mcY}{\mathcal{Y}}
+\newcommand{\boldw}{\mathbf{w}}
+\newcommand{\mbxt}{\tilde{\mathbf{x}}}
+\newcommand{\Sigmat}{\tilde{\Sigma}}
+\newcommand{\mbz}{\mathbf{z}}
+\newcommand{\mbw}{\mathbf{w}}
+\newcommand{\mcN}{\mathcal{N}}
+\newcommand{\mcP}{\mathcal{P}}
+\newcommand{\eps}{\epsilon}
+\newcommand{\trans}{\intercal}
+\newcommand{\Ut}{\tilde{U}}
+\newcommand{\Beta}{\text{Beta}}
+\newcommand{\Bernoulli}{\text{Bernoulli}}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\newcommand{\angstrom}{\textup{\AA}}
+\renewcommand{\v}[1]{\mathbf{#1}}
+
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta
+    urlcolor=cyan,
+}
+
+
+
+\begin{document}
+\begin{center}
+Mark Goldstein and Narendra Mukherjee: 6.882 project model 
+\end{center}
+\section{Introduction}
+
+\noindent Let $\mathbf{X} \in \mathbb{R}^{D=1 \times N}$ be signal data segmented into
+$N$ time windows. We are interested in inferring the frequency components present in each time window. 
+We set $D=1$ and consider each time window as an indivisible scalar-like entity, though each window is 
+actually an array of samples. Let $\mathbf{\Phi} \in \mathbb{R}^{D=1 \times K}$ be a matrix of 
+parameters for a set of $K$ signal basis elements to be allocated as latent features to the time windows.
+Each $\mathbf{\phi}_k$ is the log of the frequency parameter for the $k^{th}$ basis element, 
+$\sin(\exp[\phi_k])$. We slightly misuse notation by considering a matrix product with 
+$\boldsymbol{\Phi}$ to be a combination of $\sin(\exp[\phi_k])$'s rather than a combination 
+of $\phi_k$'s. Therefore, we also think of each basis element as a scalar-like entity. 
+Let $\mathbf{Z} \in \mathbb{R}^{K \times N}$ be a binary matrix 
+indicating the presence of the $k^{th}$ latent feature in the $i^{th}$ time window of the signal 
+with $k \in \{1 \ldots K\}$ and $i \in \{1 \ldots N\}$. Let $\mathbf{W} \in \mathbb{R}^{K \times N}$ 
+be the weights of the $k^{th}$ latent feature in the $i^{th}$ time window. Let $\mathbf{E} 
+\in \mathbb{R}^{D \times N}$ be a noise matrix, such that $X = \mathbf{\Phi}(\mathbf{Z} \circ 
+\mathbf{W}) + \mathbf{E}$ with $x_i = \mathbf{\Phi}(\mathbf{z}_i \circ \mathbf{w}_i) + \epsilon_i$. 
+The generative model is:
+
+\begin{align*}
+    \epsilon_i &\sim \mathcal{N}(0, \sigma^2_i)\\
+    w_{ik} &\sim \mathcal{N}(0, \sigma^2_w)\\
+    \phi_k = &\sim \mathcal{N}(\mu_{\phi}, \sigma^2_{\phi})\\
+    z_{ik} &\sim \Bernoulli(\pi_k)\\
+    \pi_k &\sim \Beta(a/K, b(K-1)/K)
+\end{align*}
+
+\noindent This corresponds to a Beta Process prior on $Z$. The logs of the frequency parameters 
+$\phi_k$ are drawn $i.i.d$ from base distribution $H_0$, in this case the Normal.
+The $\pi_k$'s are drawn from $\Beta(a/K,b(K=1)/K)$. This gives us $H = \sum_{k=1}^K \pi_k \delta_{\phi_k} \sim BP(a,b,H_0)$ as $K \rightarrow \infty$. (Paisley 2009). 
+Our likelihood model is that each sample $\{\ell\}_{\ell=1}^L$ is normally distributed around the estimated signal:
+
+$$ x_{i\ell} \sim \mathcal{N}(\big[ \mathbf{\Phi}(\mathbf{z}_i \circ \mathbf{w}_i) \big]_\ell, \epsilon_{i\ell}) $$
+
+\section{Variational Inference Overview}
+
+\noindent Let $\mathbf{B} = \{\boldsymbol{\pi}, \mathbf{Z}, \mathbf{\Phi}, \mathbf{W}\}$ and 
+$\boldsymbol{\theta} = \{\sigma^2_i, \sigma^2_w, \mu_{\phi}, \sigma^2_\phi, a, b \}$. 
+We will approximate the true posterior $p(\mathbf{B}|\mathbf{X},\boldsymbol{\theta})$, intractable because of the \textit{evidence} $p(X)$,
+with a variational distribution $q(\mathbf{B})$ that minimizes the divergence $KL(q(\mathbf{B}) || p(\mathbf{B}|\mathbf{X},\boldsymbol{\theta})$. 
+Let our variational distribution take the form $q_{\boldsymbol{\eta}}(\mathbf{B}) = q_{\boldsymbol{\tau}}(\boldsymbol{\pi}) q_{\boldsymbol{\gamma}}(\boldsymbol{\Phi}) 
+q_{\boldsymbol{\lambda}}(\mathbf{W}) q_{\boldsymbol{\nu}}(\mathbf{Z})$. We optimize $q$'s parameters $\boldsymbol{\eta} = \{\boldsymbol{\tau}, \boldsymbol{\gamma}, 
+\boldsymbol{\lambda}, \boldsymbol{\nu}\}$ to most closely match the true posterior.\\
+
+\noindent Omit conditioning on the hyperparameters $\boldsymbol{\theta}$ for brevity.
+Minimizing $KL(q(B)||p(B|X)) = \E_q[\log q(B)] - \E_q[\log p(B,X)] + \log p(X)$ still depends on the intractable term $p(X)$. We drop $p(X)$ because
+it does not depend on $q$. We maximize the negative of the leftover terms, $ELBO[q] = \E_q[\log p(B,X)] - \E_q[\log q(B)]$. The second term is the entropy $H[q]$.
+We expand the first term and get $ELBO[q] = \E_q[\log p(B)] + \E_q[\log p(X|B)] - H[q]$. The first term considers the priors, the middle term the likelihood, and the last term
+the entropy of the variational distribution. This also equals $ELBO[q] = \E_q[\log p(X|B)] - KL(q(B) || p(B))$, which makes explicit that we pick a $q$ that gives us high likelihood
+but that stays close to the priors. This optimization is non-convex and we are only guaranteed to find local optima. We cycle through each variational parameter, and perform coordinate ascent 
+to optimize the ELBO. The ELBO has its name because this is equivalent to maximizing a lower bound on the evidence (also called marginal likelihood)\\
+%In summary:
+%\begin{align*}
+%    \log p(\mathbf{X}|\boldsymbol{\theta}) &= \E_{q}[\log p(\mathbf{X,B}|\boldsymbol{\theta})] + H[q] + KL(q||p)\\
+%                                       &\geq \E_{q}[\log p(\mathbf{X,B}|\boldsymbol{\theta})] + H[q]
+%\end{align*}
+
+\noindent Following the \textit{finite variational method} in Doshi-Velez (2009), our variational distributions take the form:
+\begin{align*}
+    q_{\tau_k}(\pi_k) &= \Beta(\pi_k|\tau_k^a, \tau_k^b)\\
+    q_{\gamma_k}(\phi_k) &= \mathcal{N}(\gamma_{k}^{\mu}, \gamma_{k}^{\sigma^2})\\
+    q_{\lambda_{ik}}(w_{ik}) &= \mathcal{N}(\lambda_{ik}^{\mu}, \lambda_{ik}^{\sigma^2})\\
+    q_{\nu_{ik}}(z_{ik}) &= \Bernoulli(z_{ik}|\nu_{ik})
+\end{align*}
+
+\section{Expanding the ELBO:}
+
+\begin{align*}
+    \log p (\mathbf{X}|\boldsymbol{\theta}) &\geq \E_{q(\mathbf{B})}[\log p(\mathbf{X,B} | \boldsymbol{\theta})] + H[q]\\
+                                       &= \sum_{k=1}^K \E_{q(\pi_k)}[\log p(\pi_k|a,b)] 
+    + \sum_{i=1}^N \sum_{k=1}^K \E_{q(\pi_k),q(z_{ik})}[\log p(z_{ik}|\pi_k)]\\
+    &\quad + \sum_{k=1}^K \E_{q(\phi_k)}[\log p(\phi_k|\sigma^2_\phi)] + \sum_{k=1}^K \E_{q(w_{ik})}[ \log p(w_{ik}|\sigma^2_w)]\\
+    &\quad + \sum_{i=1}^N \E_{q(z_i),q(\phi),q(w_i)}[\log p(x_i | \mathbf{z_i}, \boldsymbol{\phi}, \mathbf{w}_i, \sigma^2_i)] + H[q]
+\end{align*}
+
+\noindent Next, we must substitute in the actual distributions for each of these terms.
+We now simplify each term separately before presenting the whole $ELBO$ in its expanded form.
+
+\subsection{$\E_{q(\pi_k)}[\log p(\pi_k|a,b)]$}
+
+\noindent The Beta PDF is $\Beta(x|a,b) = \frac{x^{a-1}(1-x)^{b-1}}{B(a,b)}$ 
+where $B(a,b) = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)}$. The Gamma function $\Gamma()$
+has the property that $\Gamma(x+1) =  (x)\Gamma(x)$. Let $\psi()$ be the digamma function.
+$\psi(x) = \frac{d}{dx} \log \Gamma(x) = \frac{\Gamma^\prime(x)}{\Gamma(x)}$. 
+
+
+%Doshi-Velez 2009 shows the following 
+%relevant derivation, for $p(\pi) = \Beta(a/K,1)$ and $q(\pi) = \Beta(\pi_k|\tau_k^a,\tau_k^b)$:
+%
+%\begin{align*}
+%    \E_{q(\pi)}[\log p (\pi_k|a)] &= \E_{q(\pi)}\big[ \log \big(\frac{a}{K} \pi_k^{a/k-1} \big) \big]\\
+%&= \log \frac{a}{K} + \big(\frac{a}{K} - 1 \big) \E_{q(\pi)} [\log(\pi_k)]\\
+%&= \log \frac{a}{K} + \big(\frac{a}{K} - 1 \big) (\psi(\tau_{k}^a) - \psi(\tau_{k}^a + \tau_{k}^b))
+%\end{align*}
+
+%In our case, the Beta does not have a simple $1$ for the second parameter. 
+
+\noindent Our distributions are:
+\begin{align*}
+    p(\pi_k) &= \Beta(\alpha, \beta)\\
+    q_{\tau_k}(\pi_k) &= \Beta(\pi_k|\tau_k^a, \tau_k^b)
+\end{align*}
+
+\noindent where $\alpha = \frac{a}{K}$ and $\beta= b(K-1)/K$, with $a,b \in \boldsymbol{\theta}$
+from the original model specification.
+
+\begin{align*}
+    \E_{q(\pi_k)}[\log p(\pi_k|\alpha,\beta)] &= 
+        \E_{q(\pi_k)}[\log \big( \frac{\pi_k^{\alpha-1}(1-\pi_k)^{\beta-1}}
+        {\frac{\Gamma(\alpha)\Gamma(\beta)}{\Gamma(\alpha+\beta)}}\big) ]\\   
+    &= \E_{q(\pi_k)}[\log \big(\pi_k^{\alpha-1}(1-\pi_k)^{\beta-1} 
+        \frac{\Gamma(\alpha+\beta)}{\Gamma(\alpha)\Gamma(\beta)} \big)]\\
+    &= \E_{q(\pi_k)}[ (\alpha-1)\log(\pi_k) + (\beta-1)\log(1 - \pi_k)
+        + \log \Gamma(\alpha+\beta) - \log \Gamma(\alpha) - \log \Gamma(\beta)]\\
+    &= (\alpha-1)\E_{q(\pi_k)}[\log(\pi_k)] + (\beta-1)\E_{q(\pi)}[\log(1 - \pi)]
+        + \log \Gamma(\alpha+\beta) - \log \Gamma(\alpha) - \log \Gamma(\beta)\\
+    &= (\alpha-1)(\psi(\tau_{k}^a) - \psi(\tau_{k}^a + \tau_{k}^b))
+      + (\beta-1)(\psi(\tau_{k}^b) - \psi(\tau_{k}^a + \tau_{k}^b))\\
+      &\quad + \log \Gamma(\alpha+\beta) - \log \Gamma(\alpha) - \log \Gamma(\beta)\\
+\end{align*}
+
+\noindent The above uses the property that if $q(\pi_k) = \Beta(\pi_k|\tau_k^a,\tau_k^b)$
+then $\E_{q(\pi_k)}[\log \pi_k] = \psi(\tau_k^a) - \psi(\tau_k^a + \tau_k^b)$
+and $\E_{q_(\pi_k)}[\log (1 - \pi_k)] = \psi(\tau_k^b) - \psi(\tau_k^a + \tau_l^b)$.
+This comes from the property that $\pi_k \sim \Beta(\tau_k^a,\tau_k^b)$ means
+that $1 - \pi_k$ is distributed $\Beta(\tau_k^b,\tau_k^a)$. The constants that
+do not depend on $q$ will come out in the derivations of the coordinate ascent updates.
+
+\subsection{$\E_{q(\pi_k),q(z_{ik})}[\log p(z_{ik}|\pi_k)]$}
+
+\noindent Recall that $q(z) = \Bernoulli(z_ik|\nu_{ik})$ and $q(\pi_k) = \Beta(\pi_k|\tau_k^a,\tau_k^b)$
+
+\begin{align*}
+    \E_{q(\pi_k),q(Z)}[\log p (z_{nk}|\pi_k)] 
+        &= \E_{q(\pi_k),q(Z)}\big[\log \big(\pi_k^{z_{ik}}(1 - \pi_k)^{1 - z_{ik}}\big)\big]\\
+        &= \E_{q(\pi_k),q(Z)}\big[ z_{ik} \log \pi_k + (1 - z_{ik})\log(1 - \pi_k) big]\\
+        &= \E_{q(Z)}[z_{ik}] \E_{q(\pi_k)}[\log \pi_k] +  
+            (1 - \E_{q(Z)}[z_{ik}]) \E_{q(\pi_k)}[\log(1 - \pi_k)]\\
+        &= \nu_{ik} \psi(\tau_k^a) + (1 - \nu_{ik})\psi(\tau_k^b) - \psi(\tau_k^a + \tau_k^b)
+\end{align*}
+
+
+
+
+
+
+\subsection{$\E_{q(\phi_k)}[\log p(\phi_k|\sigma^2_\phi)]$}
+
+...
+
+\subsection{$\E_{q(w_{ik})}[ \log p(w_{ik}|\sigma^2_w)]$}
+
+...
+
+\subsection{$\E_{q(z_i),q(\phi),q(w_i)}[\log p(x_i | \mathbf{z_i}, \boldsymbol{\phi}, \mathbf{w}_i, \sigma^2_i)]$ (likelihood term)}
+
+...
+
+\subsection{The expanded ELBO with our concrete choices of $p$'s and $q$'s}
+
+...
+
+\section{Coordinate Ascent Updates}
+
+...
+
+
+\begin{center} \textbf{References} \end{center}
+    \begin{itemize}
+        \item Bretthorst. Bayesian Spectrum Analysis and Parameter Estimation. 1988.
+        \item Doshi-Velez et al. Variational Inference for the IBP. May (not April) 2009.
+        \item Liang and Hoffman. Beta Process Non-negative Matrix Factorization with Stochastic Structured Mean-Field Variational Inference. 2014.
+        \item Paisley and Carin. Nonparametric Factor Analysis with Beta Process Priors. 2009.
+        \item Paisley, Carin, and Blei. Variational Inference for Stick-Breaking Beta Process Priors. 2011.
+        \item Paisley, Blei, and Jordan. Stick-Breaking Beta Processes and the Poisson Process. 2012.
+        \item Turner and Sahani. Time-frequency analysis as probabilistic inference. 2014. 
+    \end{itemize}
+\end{document}
