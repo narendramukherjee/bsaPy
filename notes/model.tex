@@ -218,13 +218,14 @@ and $q_{\gamma_k}(\phi_k) =
             \Big)%log
             \Big]%expectation
             \\
-       &= \frac{1}{2} \log \Big[2 \pi \sigma^2_{\phi} \Big]
-          + \frac{\gamma_{k}^{\sigma^2} + \big(\gamma_k^{\mu} - 
+       &= -\frac{1}{2} \log \Big[2 \pi \sigma^2_{\phi} \Big]
+          - \frac{\gamma_{k}^{\sigma^2} + \big(\gamma_k^{\mu} - 
           \mu_{\phi} \big)^2}{2 \sigma^2_{\phi}}
 \end{align*}
 
 
 \subsection{$\E_{q(w_{ik})}[ \log p(w_{ik}|\sigma^2_w)]$}
+
 
 
 \noindent Recall that $p(w_{ik}) = \mathcal{N}(0, \sigma^2_w)$
@@ -239,8 +240,8 @@ above, we get
 
 \begin{align*}
     \E_{q(w_{ik})}[ \log p(w_{ik}|\sigma^2_w)] &=
-    \frac{1}{2} \log \Big[2 \pi \sigma^2_{w} \Big]
-              + \frac{\lambda_{ik}^{\sigma^2} 
+    - \frac{1}{2} \log \Big[2 \pi \sigma^2_{w} \Big]
+              - \frac{\lambda_{ik}^{\sigma^2} 
               + \big(\lambda_{ik}^{\mu} - 0 \big)^2}{2 \sigma^2_{w}}
 \end{align*}
 
