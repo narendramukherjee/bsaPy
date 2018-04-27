@@ -126,7 +126,7 @@ to optimize the ELBO. The ELBO has its name because this is equivalent to maximi
     \log p (\mathbf{X}|\boldsymbol{\theta}) &\geq \E_{q(\mathbf{B})}[\log p(\mathbf{X,B} | \boldsymbol{\theta})] + H[q]\\
                                        &= \sum_{k=1}^K \E_{q(\pi_k)}[\log p(\pi_k|a,b)] 
     + \sum_{i=1}^N \sum_{k=1}^K \E_{q(\pi_k),q(z_{ik})}[\log p(z_{ik}|\pi_k)]\\
-    &\quad + \sum_{k=1}^K \E_{q(\phi_k)}[\log p(\phi_k|\sigma^2_\phi)] + \sum_{k=1}^K \E_{q(w_{ik})}[ \log p(w_{ik}|\sigma^2_w)]\\
+    &\quad + \sum_{k=1}^K \E_{q(\phi_k)}[\log p(\phi_k|\mu_{\phi},\sigma^2_\phi)] + \sum_{k=1}^K \E_{q(w_{ik})}[ \log p(w_{ik}|\sigma^2_w)]\\
     &\quad + \sum_{i=1}^N \E_{q(z_i),q(\phi),q(w_i)}[\log p(x_i | \mathbf{z_i}, \boldsymbol{\phi}, \mathbf{w}_i, \sigma^2_i)] + H[q]
 \end{align*}
 
@@ -201,13 +201,51 @@ do not depend on $q$ will come out in the derivations of the coordinate ascent u
 
 
 
-\subsection{$\E_{q(\phi_k)}[\log p(\phi_k|\sigma^2_\phi)]$}
+\subsection{$\E_{q(\phi_k)}[\log p(\phi_k|\mu_{\phi},\sigma^2_\phi)]$}
+
+
+\noindent Recall that $p(\phi_k) = \mathcal{N}(\mu_{\phi},\sigma^2_{\phi})$
+and $q_{\gamma_k}(\phi_k) = 
+\mathcal{N}(\gamma_{k}^{\mu}, \gamma_{k}^{\sigma^2})$\\
+
+\begin{align*}
+    \E_{q(\phi_k)}[\log p(\phi_k|\mu_{\phi},\sigma^2_\phi)] &=
+        \E_{q(\phi_k)}
+            \Big[%expectation
+            \log \Big(%log
+                \frac{1}{\sqrt{2 \pi \sigma^2_\phi}} \exp 
+                \big[-\frac{(\phi_k - \mu_{\phi})}{2 \sigma^2_\phi}\big]
+            \Big)%log
+            \Big]%expectation
+            \\
+       &= \frac{1}{2} \log \Big[2 \pi \sigma^2_{\phi} \Big]
+          + \frac{\gamma_{k}^{\sigma^2} + \big(\gamma_k^{\mu} - 
+          \mu_{\phi} \big)^2}{2 \sigma^2_{\phi}}
+\end{align*}
+
 
 ...
 
 \subsection{$\E_{q(w_{ik})}[ \log p(w_{ik}|\sigma^2_w)]$}
 
-...
+
+\noindent Recall that $p(w_{ik}) = \mathcal{N}(0, \sigma^2_w)$
+and $q_{\lambda_{ik}}(w_{ik}) = 
+\mathcal{N}(\lambda_{ik}^{\mu}, \lambda_{ik}^{\sigma^2})$. Using the result just
+above, we get
+
+
+
+
+
+
+\begin{align*}
+    \E_{q(w_{ik})}[ \log p(w_{ik}|\sigma^2_w)] &=
+    \frac{1}{2} \log \Big[2 \pi \sigma^2_{w} \Big]
+              + \frac{\lambda_{ik}^{\sigma^2} 
+              + \big(\lambda_{ik}^{\mu} - 0 \big)^2}{2 \sigma^2_{w}}
+\end{align*}
+
 
 \subsection{$\E_{q(z_i),q(\phi),q(w_i)}[\log p(x_i | \mathbf{z_i}, \boldsymbol{\phi}, \mathbf{w}_i, \sigma^2_i)]$ (likelihood term)}
 
