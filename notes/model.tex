@@ -57,16 +57,28 @@ Mark Goldstein and Narendra Mukherjee: 6.882 project model
 \end{center}
 \section{Introduction}
 
-\noindent Let $\mathbf{X} \in \mathbb{R}^{D=1 \times N}$ be signal data segmented into
-$N$ time windows. We are interested in inferring the frequency components present in each time window. 
-We set $D=1$ and consider each time window as an indivisible scalar-like entity, though each window is 
-actually an array of samples. Let $\mathbf{\Phi} \in \mathbb{R}^{D=1 \times K}$ be a matrix of 
-parameters for a set of $K$ signal basis elements to be allocated as latent features to the time windows.
+\noindent Let $\mathbf{X}$ be signal data segmented into $N$ time windows of $\ell$ samples each.
+We are interested in inferring the frequency components present in each time window. 
+To do this, we will use a non-parametric latent feature model with a Beta Process prior. In the generative story,
+each time window of the signal exhibits a blend of several latent features. Each of these latent features is defined by
+a $\sin$ at a particular frequency. There are an infinite amount of such $\sin$s. Each time window exhibits a finite amount
+of these $\sin$s.\\
+
+\noindent Let $\mathbf{X} \in \mathbb{R}^{D=1 \times N}$ be a matrix of the time windows. 
+We set the dimension $D$ of each time window to $D=1$ 
+and consider each time window as an indivisible scalar-like entity for the purposes
+of the following setup, though each window is actually an array of $\ell$ samples. 
+The only place where we will need to consider the underlying samples is in the likelihood term.
+Otherwise, we reason only at the window level by assigning blends of frequencies to windows, where
+each frequency is also $\ell$ samples.\\
+
+\noindent Let $\mathbf{\Phi} \in \mathbb{R}^{D=1 \times K}$ be a matrix of parameters for a set of $K$ 
+signal basis elements to be allocated as latent features to the time windows.
 Each $\mathbf{\phi}_k$ is the log of the frequency parameter for the $k^{th}$ basis element, 
-$\sin(\exp[\phi_k])$. We slightly misuse notation by considering a matrix product with 
+$\sin(\exp[\phi_k])$. We misuse notation by considering a matrix product with 
 $\boldsymbol{\Phi}$ to be a combination of $\sin(\exp[\phi_k])$'s rather than a combination 
-of $\phi_k$'s. Therefore, we also think of each basis element as a scalar-like entity. 
-Let $\mathbf{Z} \in \mathbb{R}^{K \times N}$ be a binary matrix 
+of $\phi_k$'s. So if $\mathbf{a} \in \mathbb{R}^K$, then we let $\boldsymbol{\Phi}\mathbf{a} =
+\sum_{k=1}^K a_k \sin(\exp[\phi_k])$. Let $\mathbf{Z} \in \mathbb{R}^{K \times N}$ be a binary matrix 
 indicating the presence of the $k^{th}$ latent feature in the $i^{th}$ time window of the signal 
 with $k \in \{1 \ldots K\}$ and $i \in \{1 \ldots N\}$. Let $\mathbf{W} \in \mathbb{R}^{K \times N}$ 
 be the weights of the $k^{th}$ latent feature in the $i^{th}$ time window. Let $\mathbf{E} 
@@ -84,10 +96,16 @@ The generative model is:
 
 \noindent This corresponds to a Beta Process prior on $Z$. The logs of the frequency parameters 
 $\phi_k$ are drawn $i.i.d$ from base distribution $H_0$, in this case the Normal.
-The $\pi_k$'s are drawn from $\Beta(a/K,b(K=1)/K)$. This gives us $H = \sum_{k=1}^K \pi_k \delta_{\phi_k} \sim BP(a,b,H_0)$ as $K \rightarrow \infty$. (Paisley 2009). 
-Our likelihood model is that each sample $\{\ell\}_{\ell=1}^L$ is normally distributed around the estimated signal:
+The $\pi_k$'s are drawn from $\Beta(a/K,b(K=1)/K)$. This gives us $H = \sum_{k=1}^K \pi_k \delta_{\phi_k} \sim BP(a,b,H_0)$ as $K \rightarrow \infty$. (Paisley 2009).\\
 
-$$ x_{i\ell} \sim \mathcal{N}(\big[ \mathbf{\Phi}(\mathbf{z}_i \circ \mathbf{w}_i) \big]_\ell, \epsilon_{i\ell}) $$
+\noindent Our likelihood model is that each window $i$ of the true signal, now to be thought of as $\ell$-samples-dimensional, is normally distributed around the $i^{th}$
+time window of the estimated signal:
+
+\begin{align*}
+    \hat{\mathbf{x}}_i &= \sum_{k=1}^K z_{ik}w_{ik}\big[\sin\big(\exp[\phi_k]\big)\big]\\
+    p(\mathbf{X} |\mathbf{Z}, \mathbf{W}, \boldsymbol{\Phi},\{\sigma^2_i\}_{i=1}^N) &= \sum_{i=1}^N \log \mathcal{N}(\mathbf{x}_i | \hat{\mathbf{x}}_i, \sigma^2_i\mathbf{I})
+\end{align*}
+
 
 \section{Variational Inference Overview}
 
