@@ -36,6 +36,8 @@
 \newcommand{\Ut}{\tilde{U}}
 \newcommand{\Beta}{\text{Beta}}
 \newcommand{\Bernoulli}{\text{Bernoulli}}
+\newcommand{\Elbo}{\text{ELBO}}
+\newcommand{\KL}{\text{KL}}
 \DeclareMathOperator*{\argmax}{arg\,max}
 \DeclareMathOperator*{\argmin}{arg\,min}
 \newcommand{\angstrom}{\textup{\AA}}
@@ -112,25 +114,42 @@ time window of the estimated signal:
 \noindent Let $\mathbf{B} = \{\boldsymbol{\pi}, \mathbf{Z}, \mathbf{\Phi}, \mathbf{W}\}$ and 
 $\boldsymbol{\theta} = \{\sigma^2_i, \sigma^2_w, \mu_{\phi}, \sigma^2_\phi, a, b \}$. 
 We will approximate the true posterior $p(\mathbf{B}|\mathbf{X},\boldsymbol{\theta})$, intractable because of the \textit{evidence} $p(X)$,
-with a variational distribution $q(\mathbf{B})$ that minimizes the divergence $KL(q(\mathbf{B}) || p(\mathbf{B}|\mathbf{X},\boldsymbol{\theta})$. 
+with a variational distribution $q(\mathbf{B})$ that minimizes the divergence $\KL(q(\mathbf{B}) || p(\mathbf{B}|\mathbf{X},\boldsymbol{\theta})$. 
 Let our variational distribution take the form $q_{\boldsymbol{\eta}}(\mathbf{B}) = q_{\boldsymbol{\tau}}(\boldsymbol{\pi}) q_{\boldsymbol{\gamma}}(\boldsymbol{\Phi}) 
 q_{\boldsymbol{\lambda}}(\mathbf{W}) q_{\boldsymbol{\nu}}(\mathbf{Z})$. We optimize $q$'s parameters $\boldsymbol{\eta} = \{\boldsymbol{\tau}, \boldsymbol{\gamma}, 
-\boldsymbol{\lambda}, \boldsymbol{\nu}\}$ to most closely match the true posterior.\\
+\boldsymbol{\lambda}, \boldsymbol{\nu}\}$ to most closely match the true posterior. Omit conditioning on the hyperparameters $\boldsymbol{\theta}$ for brevity. Minimizing 
 
-\noindent Omit conditioning on the hyperparameters $\boldsymbol{\theta}$ for brevity.
-Minimizing $KL(q(B)||p(B|X)) = \E_q[\log q(B)] - \E_q[\log p(B,X)] + \log p(X)$ still depends on the intractable term $p(X)$. We drop $p(X)$ because
-it does not depend on $q$. We maximize the negative of the leftover terms, $ELBO[q] = \E_q[\log p(B,X)] - \E_q[\log q(B)]$. The second term is the entropy $H[q]$.
-We expand the first term and get $ELBO[q] = \E_q[\log p(B)] + \E_q[\log p(X|B)] - H[q]$. The first term considers the priors, the middle term the likelihood, and the last term
-the entropy of the variational distribution. This also equals $ELBO[q] = \E_q[\log p(X|B)] - KL(q(B) || p(B))$, which makes explicit that we pick a $q$ that gives us high likelihood
-but that stays close to the priors. This optimization is non-convex and we are only guaranteed to find local optima. We cycle through each variational parameter, and perform coordinate ascent 
+
+\begin{align*}
+    \KL(q(\mathbf{B})||p(\mathbf{B}|\mathbf{X})) &= \E_q[\log q(\mathbf{B})] - \E_q[\log p(\mathbf{B,X})] + \log p(\mathbf{X})
+\end{align*}
+
+\noindent still depends on the intractable term $p(\mathbf{X})$. We drop $p(\mathbf{X})$ because
+it does not depend on $q$. We maximize the negative of the leftover terms
+
+\begin{align*}
+    \Elbo[q] = \E_q[\log p(\mathbf{B,X})] - \E_q[\log q(\mathbf{B})] 
+\end{align*}
+
+\noindent The first term is the joint of the data and the model and
+the second term is the entropy $H[q]$ of the variational distribution. 
+We expand the first term and get 
+
+\begin{align*}
+    \Elbo[q] = \E_q[\log p(\mathbf{B})] + \E_q[\log p(\mathbf{X}|\mathbf{B})] - H[q]
+\end{align*}
+
+\noindent The first term considers the priors, the middle term the likelihood, and the last term
+the entropy of the variational distribution. This also equals 
+
+\begin{align*}
+    \Elbo[q] = \E_q[\log p(\mathbf{X}|\mathbf{B})] - \KL(q(\mathbf{B}) || p(\mathbf{B}))
+\end{align*}
+
+\noindent which makes explicit that we pick a $q$ that gives us high likelihood but that stays close to the priors. 
+This optimization is non-convex and we are only guaranteed to find local optima. We cycle through each variational parameter, and perform coordinate ascent 
 to optimize the ELBO. The ELBO has its name because this is equivalent to maximizing a lower bound on the evidence (also called marginal likelihood)\\
-%In summary:
-%\begin{align*}
-%    \log p(\mathbf{X}|\boldsymbol{\theta}) &= \E_{q}[\log p(\mathbf{X,B}|\boldsymbol{\theta})] + H[q] + KL(q||p)\\
-%                                       &\geq \E_{q}[\log p(\mathbf{X,B}|\boldsymbol{\theta})] + H[q]
-%\end{align*}
 
-\noindent Following the \textit{finite variational method} in Doshi-Velez (2009), our variational distributions take the form:
 \begin{align*}
     q_{\tau_k}(\pi_k) &= \Beta(\pi_k|\tau_k^a, \tau_k^b)\\
     q_{\gamma_k}(\phi_k) &= \mathcal{N}(\gamma_{k}^{\mu}, \gamma_{k}^{\sigma^2})\\
