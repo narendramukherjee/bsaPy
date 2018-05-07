@@ -29,7 +29,6 @@ class MF_IBP_VAE(nn.Module):
 
         # inference network: image to logits, one upweighting for each feature (i.e. a recognition net)
         self.encoder = nn.Linear(self.D, self.num_features)
-            # nn.Linear(self.D, self.num_features)
 
         # generator network: torch.mm(Z, A)
         self.A_mean = nn.Parameter(torch.zeros(self.num_features, self.D))
