@@ -14,17 +14,10 @@ from utils import SMALL, log_sum_exp  # noqa: F401
 import shared
 
 
-class MF_IBP_VAE(nn.Module):
-    """
-    This is a mean-field, BBVI version of the IBP-VAE - for comparison against the paintbox models.
-    """
+class MF_IBP(nn.Module):
 
-    #def __init__(self, max_truncation_level=6, alpha0=5., sigma_n=0.5, D=36, init=None):
-        #super(MF_IBP_VAE, self).__init__()
-
-
-    def __init(self,K=10,a=1,b=1,sigma_n=0.5):
-        super(MF_IBP,VAE,self).__init__()
+    def __init(self,K=10,a=1,b=1,sigma_n=0.5, sigma_):
+        super(MF_IBP, self).__init__()
         self.truncation = K
         self.num_features = K
         self.sigma_n = sigma_n
@@ -71,7 +64,6 @@ class MF_IBP_VAE(nn.Module):
         
         q_phi = distributions.Normal(loc=self.phi_mean,scale=(self.phi_logvar/2).exp())
         q_w = distributions.Normal(loc=self.w_mean,scale=(self.w_logvar/2).exp())
-        q_a = distributions.Normal(loc=self.A_mean, scale=(self.A_logvar/2).exp())
         
         # For now, just take the mean
         phi = q_phi.mean
@@ -82,12 +74,9 @@ class MF_IBP_VAE(nn.Module):
         # w = q_w.rsample()
 
         # NLL
-        x_mean = torch.mm(z [elementwise] w,phi)
+        x_mean = torch.mm(torch.mul(z,w),phi) # z and w multiplied elementwise
         nll = -(distributions.Normal(loc=x_mean, scale=self.sigma_n).log_prob(x))
-        
-        
-
-        return nll, p_pi, q_pi, p_z, q_z, p_a, q_a
+        return nll, p_pi, q_pi, q_z, q_phi, q_w
 
     @staticmethod
     def elbo(nll, p_pi, q_pi, p_z, q_z, p_a, q_a, batch_sz, sz):
