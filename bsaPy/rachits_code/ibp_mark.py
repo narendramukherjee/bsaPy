@@ -74,9 +74,10 @@ class MF_IBP(nn.Module):
         # w = q_w.rsample()
 
         # NLL
-        x_mean = torch.mm(torch.mul(z,w),phi) # z and w multiplied elementwise
+        sinbasis = expression involving sins, exps, arrays, phi
+        x_mean = torch.mm(torch.mul(z,w),sinbasis) # z and w multiplied elementwise
         nll = -(distributions.Normal(loc=x_mean, scale=self.sigma_n).log_prob(x))
-        return nll, p_pi, q_pi, q_z, q_phi, q_w
+        return nll, p_pi, q_pi, q_z, q_phi, q_w, sinbasis
 
     @staticmethod
     def elbo(nll, p_pi, q_pi, p_z, q_z, p_a, q_a, batch_sz, sz):
