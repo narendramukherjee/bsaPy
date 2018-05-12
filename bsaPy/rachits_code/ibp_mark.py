@@ -74,12 +74,16 @@ class MF_IBP(nn.Module):
         # w = q_w.rsample()
 
         # NLL
-        sinbasis = expression involving sins, exps, arrays, phi
+        sinbasis = torch.ones(K,N_SAMPLES)*torch.arange(0,N_SAMPLES,1)
+
+        for k in range(K):
+            sinbasis[k] = torch.sin(sinbasis[k]*phi[k])
+        
         x_mean = torch.mm(torch.mul(z,w),sinbasis) # z and w multiplied elementwise
         nll = -(distributions.Normal(loc=x_mean, scale=self.sigma_n).log_prob(x))
         return nll, p_pi, q_pi, q_z, q_phi, q_w, sinbasis
 
-    @staticmethod
+    
     def elbo(nll, p_pi, q_pi, p_z, q_z, p_a, q_a, batch_sz, sz):
         kl_divergence = distributions.kl_divergence
         components = (
@@ -123,6 +127,7 @@ class MF_IBP(nn.Module):
         # reinforce_loss = self.z_log_prob.sum(1) * loss.data  # NOTE `.data` so that this doesn't backprop to generative model
         return loss.sum(), -loss.sum()
 
+
     def compute_eval_loss(self, x, sz, num_importance_samples):
         """
         Computes the evaluation-level loss - we want finer grained logging at this level
@@ -132,6 +137,8 @@ class MF_IBP(nn.Module):
         nll, p_pi, q_pi, p_z, q_z, p_a, q_a = self.forward(x)
         loss = self.iwae(nll, p_pi, q_pi, p_z, q_z, p_a, q_a, batch_sz, sz, num_importance_samples)
         return map(lambda x: x.sum().item(), loss)
+
+
 
     def train_epoch(self, train_loader, optimizer, epoch, args, device, n_samples):
         self.train()
@@ -150,6 +157,11 @@ class MF_IBP(nn.Module):
 
         return total_loss / (sz * n_samples)
 
+
+
+
+
+    '''
     def evaluate(self, dataset, args, device, num_importance_samples):
         """
         Returns `ret`, which contains summary statistics about the evaluation on the `dataset`
@@ -177,3 +189,8 @@ class MF_IBP(nn.Module):
             ('KL_A', total_kl_a),
         ])
         return ret
+    ''' 
+
+
+
+
