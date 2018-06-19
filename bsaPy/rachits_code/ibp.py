@@ -88,6 +88,7 @@ class MF_IBP_VAE(nn.Module):
         # q(z)
         # machine/fp precision is higher near 0 than at 1 (crucial)
         probs = F.sigmoid(torch.clamp(self.encoder(x.view(-1, self.D)), -25, 9))
+        
         q_z = shared.STRelaxedBernoulli(temperature=0.1, probs=probs)
         # q_z = distributions.RelaxedBernoulli(temperature=0.2, probs=probs)
         z = q_z.rsample()

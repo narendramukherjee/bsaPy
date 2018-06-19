@@ -1,9 +1,9 @@
 import torch
-from datasets import generate_gg_blocks
+#from datasets import generate_gg_blocks
 import pdb  # noqa: F401
 from utils import visualize_features
 
-
+'''
 def compute_init(init_method, dataset, features):
     if init_method == 'truth':
         true_features = torch.from_numpy(generate_gg_blocks())
@@ -29,6 +29,7 @@ def compute_init(init_method, dataset, features):
         return torch.zeros(features, dataset.shape[1]).uniform_(-0.5, 0.5)
     else:
         return None
+'''
 
 
 class Round(torch.autograd.Function):

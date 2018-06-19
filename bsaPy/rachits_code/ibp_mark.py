@@ -84,6 +84,25 @@ class MF_IBP(nn.Module):
         return nll, p_pi, q_pi, q_z, q_phi, q_w, sinbasis
 
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     def elbo(nll, p_pi, q_pi, p_z, q_z, p_a, q_a, batch_sz, sz):
         kl_divergence = distributions.kl_divergence
         components = (
